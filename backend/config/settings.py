@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decouple import config
 from pathlib import Path
 
@@ -82,14 +83,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # ─── Internacionalización ───────────────────────────────────────────────────
 LANGUAGE_CODE = 'es-ar'
-TIME_ZONE     = 'America/Argentina/Buenos_Aires'
+TIME_ZONE = 'America/Argentina/Buenos_Aires'
 USE_I18N = True
-USE_TZ   = True
+USE_TZ = True
 
 # ─── Archivos estáticos y media ─────────────────────────────────────────────
-STATIC_URL  = '/static/'
-MEDIA_URL   = '/media/'
-MEDIA_ROOT  = BASE_DIR / 'media'
+STATIC_URL = '/static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -104,9 +105,9 @@ REST_FRAMEWORK = {
 }
 
 # ─── JWT (tokens de autenticación) ──────────────────────────────────────────
-from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME':  timedelta(hours=8),   # sesión de un día de trabajo
+    # sesión de un día de trabajo
+    'ACCESS_TOKEN_LIFETIME':  timedelta(hours=8),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
@@ -116,3 +117,5 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ]
+# Modelo de autenticación personalizado
+AUTH_USER_MODEL = 'usuarios.Usuario'
