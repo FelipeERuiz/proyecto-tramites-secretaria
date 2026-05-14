@@ -33,17 +33,18 @@ services:
     networks:
       - tramites_net
 
-  frontend:
-    build: ./frontend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    environment:
-      VITE_API_URL: ${VITE_API_URL}
-    networks:
-      - tramites_net
+  
+  #frontend:
+   # build: ./frontend
+    #volumes:
+     # - ./frontend:/app
+      #- /app/node_modules
+    #ports:
+     # - "5173:5173"
+    #environment:
+     # VITE_API_URL: ${VITE_API_URL}
+    #networks:
+     # - tramites_net
 
 volumes:
   postgres_data:
