@@ -78,10 +78,52 @@ class TramiteCrearSerializer(serializers.ModelSerializer):
         fields = ['tipo_id', 'descripcion', 'vencimiento']
 
     def create(self, validated_data):
-        # El ciudadano se inyecta desde la view usando el usuario autenticado
         ciudadano = self.context['request'].user.ciudadano
         if not ciudadano:
             raise serializers.ValidationError(
                 'Solo los ciudadanos pueden registrar trámites.'
             )
         return Tramite.objects.create(ciudadano=ciudadano, **validated_data)
+
+
+# ─── Día 5: Serializers del funcionario ─────────────────────────────────────
+
+class CambiarEstadoSerializer(serializers.Serializer):
+    """
+    CU03 — Cambiar estado de trámite.
+    El funcionario elige el nuevo estado y opcionalmente escribe un motivo.
+    """
+    tipo_estado = serializers.ChoiceField(choices=Tramite.ESTADO_CHOICES)
+    motivo      = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class AsignarTramiteSerializer(serializers.Serializer):
+    """
+    CU08 — Asignar trámite a funcionario.
+    Recibe el ID del funcionario al que se le asigna.
+    """
+    funcionario_id = serializers.IntegerField()
+
+    def validate_funcionario_id(self, value):
+        from apps.usuarios.models import Funcionario
+        try:
+            Funcionario.objects.get(pk=value, activo=True)
+        except Funcionario.DoesNotExist:
+            raise serializers.ValidationError('El funcionario no existe o no está activo.')
+        return value
+
+
+class DevolucionSerializer(serializers.Serializer):
+    """
+    CU10 — Registrar devolución de trámite al ciudadano.
+    El funcionario devuelve el trámite con un motivo obligatorio.
+    """
+    motivo = serializers.CharField(min_length=10)
+
+
+class ComentarioCrearSerializer(serializers.Serializer):
+    """
+    CU13 — Generar comentario en trámite.
+    Tanto funcionarios como ciudadanos pueden comentar.
+    """
+    texto = serializers.CharField(min_length=1)
