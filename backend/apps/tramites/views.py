@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from .models import Tramite, TipoTramite, Estado, Comentario
+from .models import Tramite, TipoTramite, Estado, Comentario, Resolucion
 from apps.usuarios.models import Funcionario
 from .serializers import (
     TramiteCrearSerializer,
@@ -17,14 +17,12 @@ from .serializers import (
     DevolucionSerializer,
     ComentarioCrearSerializer,
     ComentarioSerializer,
+    ResolucionCrearSerializer,
+    ResolucionSerializer,
 )
 
 
 class TipoTramiteListView(APIView):
-    """
-    GET /api/tramites/tipos/
-    Lista los tipos de trámite disponibles.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -34,10 +32,6 @@ class TipoTramiteListView(APIView):
 
 
 class TramiteListCreateView(APIView):
-    """
-    GET  /api/tramites/         → CU09 — Listar trámites
-    POST /api/tramites/         → CU01 — Registrar trámite de ciudadano
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -86,9 +80,6 @@ class TramiteListCreateView(APIView):
 
 
 class TramiteDetalleView(APIView):
-    """
-    GET /api/tramites/<id>/    → CU02 — Consultar estado de trámite
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -105,13 +96,7 @@ class TramiteDetalleView(APIView):
         return Response(serializer.data)
 
 
-# ─── Día 5: Views del funcionario ────────────────────────────────────────────
-
 class CambiarEstadoView(APIView):
-    """
-    POST /api/tramites/<id>/cambiar-estado/    → CU03
-    El funcionario cambia el estado del trámite y se registra en el historial.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -128,7 +113,6 @@ class CambiarEstadoView(APIView):
             nuevo_estado = serializer.validated_data['tipo_estado']
             motivo       = serializer.validated_data.get('motivo', '')
 
-            # Registrar en el historial de estados
             Estado.objects.create(
                 tramite     = tramite,
                 funcionario = request.user.funcionario,
@@ -136,7 +120,6 @@ class CambiarEstadoView(APIView):
                 motivo      = motivo,
             )
 
-            # Actualizar el estado actual del trámite
             tramite.estado_actual = nuevo_estado
             if nuevo_estado == 'finalizado':
                 tramite.fecha_fin = timezone.now().date()
@@ -148,10 +131,6 @@ class CambiarEstadoView(APIView):
 
 
 class AsignarTramiteView(APIView):
-    """
-    POST /api/tramites/<id>/asignar/    → CU08
-    Asigna un trámite a un funcionario específico.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -171,7 +150,6 @@ class AsignarTramiteView(APIView):
             tramite.funcionario_asignado = funcionario
             if tramite.estado_actual == 'pendiente':
                 tramite.estado_actual = 'en_proceso'
-                # Registrar el cambio de estado automático
                 Estado.objects.create(
                     tramite     = tramite,
                     funcionario = request.user.funcionario,
@@ -186,10 +164,6 @@ class AsignarTramiteView(APIView):
 
 
 class DevolucionView(APIView):
-    """
-    POST /api/tramites/<id>/devolver/    → CU10
-    El funcionario devuelve el trámite al ciudadano con un motivo.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -205,7 +179,6 @@ class DevolucionView(APIView):
         if serializer.is_valid():
             motivo = serializer.validated_data['motivo']
 
-            # Registrar el cambio de estado
             Estado.objects.create(
                 tramite     = tramite,
                 funcionario = request.user.funcionario,
@@ -216,7 +189,6 @@ class DevolucionView(APIView):
             tramite.estado_actual = 'devuelto'
             tramite.save()
 
-            # Crear un comentario automático con el motivo de devolución
             Comentario.objects.create(
                 tramite     = tramite,
                 funcionario = request.user.funcionario,
@@ -229,10 +201,6 @@ class DevolucionView(APIView):
 
 
 class ComentarioView(APIView):
-    """
-    GET  /api/tramites/<id>/comentarios/    → lista comentarios del trámite
-    POST /api/tramites/<id>/comentarios/    → CU13 — crear comentario
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -249,7 +217,6 @@ class ComentarioView(APIView):
             texto = serializer.validated_data['texto']
             user  = request.user
 
-            # El comentario se asocia al perfil según el rol
             comentario = Comentario.objects.create(
                 tramite     = tramite,
                 funcionario = user.funcionario if user.rol == 'funcionario' else None,
@@ -259,6 +226,62 @@ class ComentarioView(APIView):
 
             return Response(
                 ComentarioSerializer(comentario).data,
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ─── Día 6: CU11 — Generar respuesta/resolución a un trámite ────────────────
+
+class ResolucionView(APIView):
+    """
+    GET  /api/tramites/<id>/resoluciones/    → lista resoluciones del trámite
+    POST /api/tramites/<id>/resoluciones/    → CU11 — crear resolución
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        tramite = get_object_or_404(Tramite, pk=pk)
+        resoluciones = tramite.resoluciones.all()
+        serializer = ResolucionSerializer(resoluciones, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, pk):
+        if request.user.rol != 'funcionario':
+            return Response(
+                {'error': 'Solo los funcionarios pueden emitir resoluciones.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        tramite = get_object_or_404(Tramite, pk=pk)
+        serializer = ResolucionCrearSerializer(data=request.data)
+
+        if serializer.is_valid():
+            descripcion = serializer.validated_data['descripcion']
+            finalizar   = serializer.validated_data['finalizar']
+
+            # Crear la resolución
+            resolucion = Resolucion.objects.create(
+                tramite     = tramite,
+                funcionario = request.user.funcionario,
+                descripcion = descripcion,
+            )
+
+            # Si el funcionario elige finalizar el trámite junto con la resolución
+            if finalizar:
+                Estado.objects.create(
+                    tramite     = tramite,
+                    funcionario = request.user.funcionario,
+                    tipo_estado = 'finalizado',
+                    motivo      = f'Trámite finalizado con resolución #{resolucion.pk}',
+                )
+                tramite.estado_actual = 'finalizado'
+                tramite.fecha_fin = timezone.now().date()
+                tramite.save()
+
+            return Response(
+                TramiteDetalleSerializer(tramite).data,
                 status=status.HTTP_201_CREATED
             )
 

@@ -80,7 +80,9 @@ class Usuario(AbstractBaseUser):
         Funcionario, on_delete=models.CASCADE,
         null=True, blank=True, related_name='usuario'
     )
-
+    @property
+    def is_active(self):
+        return self.activo
     objects = UsuarioManager()
 
     USERNAME_FIELD  = 'username'
