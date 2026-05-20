@@ -132,18 +132,24 @@ const errorGeneral = ref('')
 const errors       = reactive({ username: '', password: '' })
 
 const login = async () => {
-  // Limpiar errores
   errors.username = ''
   errors.password = ''
   errorGeneral.value = ''
 
-  // Validar campos vacíos
   if (!username.value) { errors.username = 'El usuario es obligatorio'; return }
   if (!password.value) { errors.password = 'La contraseña es obligatoria'; return }
 
   loading.value = true
   try {
     await auth.login(username.value, password.value)
+
+    // Esperar a que el perfil esté cargado antes de redirigir
+    let intentos = 0
+    while (!auth.user && intentos < 20) {
+      await new Promise(r => setTimeout(r, 150))
+      intentos++
+    }
+
     // Redirigir según el rol
     if (auth.esFuncionario) {
       router.push({ name: 'FuncionarioDashboard' })

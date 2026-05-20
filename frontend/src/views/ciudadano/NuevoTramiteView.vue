@@ -1,13 +1,14 @@
 <template>
   <div>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" href="/dashboard" class="mb-4">
+    <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="volverDashboard" class="mb-4">
       Volver a mis trámites
     </v-btn>
 
-    <v-card-title class="text-h6 pb-4">
+    <v-card class="pa-6" max-width="600">
+      <v-card-title class="text-h6 pb-4">
         <v-icon start icon="mdi-file-plus" />
-         PRUEBA 12345
-    </v-card-title>
+        Nuevo Trámite
+      </v-card-title>
 
       <v-card-text>
         <v-select
@@ -40,6 +41,16 @@
         />
 
         <v-alert
+          v-if="exito"
+          type="success"
+          variant="tonal"
+          class="mt-4"
+          density="compact"
+        >
+          ¡Trámite registrado exitosamente! Redirigiendo...
+        </v-alert>
+
+        <v-alert
           v-if="errorGeneral"
           type="error"
           variant="tonal"
@@ -52,10 +63,11 @@
 
       <v-card-actions class="px-4 pb-4">
         <v-spacer />
-        <v-btn variant="text" :to="{ name: 'Dashboard' }">Cancelar</v-btn>
+        <v-btn variant="text" @click="volverDashboard">Cancelar</v-btn>
         <v-btn
           color="primary"
           :loading="loading"
+          :disabled="exito"
           @click="registrarTramite"
           prepend-icon="mdi-send"
         >
@@ -67,16 +79,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
 
 const router = useRouter()
-const notify = inject('notify')
 
 const tipos        = ref([])
 const loadingTipos = ref(false)
 const loading      = ref(false)
+const exito        = ref(false)
 const errorGeneral = ref('')
 const errors       = reactive({ tipo_id: '', descripcion: '' })
 
@@ -85,6 +97,10 @@ const form = reactive({
   descripcion: '',
   vencimiento: '',
 })
+
+const volverDashboard = () => {
+  window.location.href = '/dashboard'
+}
 
 const cargarTipos = async () => {
   loadingTipos.value = true
@@ -99,7 +115,6 @@ const cargarTipos = async () => {
 }
 
 const registrarTramite = async () => {
-  console.log('1 - inicio')
   errors.tipo_id = ''
   errors.descripcion = ''
   errorGeneral.value = ''
@@ -109,15 +124,20 @@ const registrarTramite = async () => {
 
   loading.value = true
   try {
-    console.log('2 - antes del post')
-    const response = await api.post('/tramites/', {
-      tipo_id: form.tipo_id,
+    const payload = {
+      tipo_id:     form.tipo_id,
       descripcion: form.descripcion,
-    })
-    console.log('3 - post exitoso', response.data)
-    window.location.href = '/dashboard'
+    }
+    if (form.vencimiento) payload.vencimiento = form.vencimiento
+
+    await api.post('/tramites/', payload)
+
+    // Mostrar mensaje de éxito y redirigir
+    exito.value = true
+    setTimeout(() => {
+      window.location.href = '/dashboard'
+    }, 1000)
   } catch (err) {
-    console.log('4 - ERROR', err)
     errorGeneral.value = err.response?.data?.error || 'Error al registrar el trámite.'
   } finally {
     loading.value = false

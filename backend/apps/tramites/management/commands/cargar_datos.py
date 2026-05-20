@@ -60,44 +60,23 @@ class Command(BaseCommand):
         )
         self.stdout.write(f'  Funcionarios: {f1}, {f2}')
 
-        # ─── Usuarios ───────────────────────────────────────────────
-        u_maria, _ = Usuario.objects.get_or_create(
-            username='maria.gonzalez', defaults={
-                'rol': 'ciudadano', 'ciudadano': c1,
-            }
-        )
-        if not u_maria.has_usable_password():
-            u_maria.set_password('Maria1234!')
-            u_maria.save()
+        # ─── Usuarios (con contraseñas correctamente hasheadas) ──────
+        usuarios_data = [
+            ('maria.gonzalez', 'Maria1234!', 'ciudadano',   c1, None),
+            ('carlos.perez',   'Carlos1234!', 'ciudadano',  c2, None),
+            ('juan.lopez',     'Juan1234!',   'funcionario', None, f1),
+            ('ana.martinez',   'Ana1234!',    'funcionario', None, f2),
+        ]
+        for username, password, rol, ciudadano, funcionario in usuarios_data:
+            user, created = Usuario.objects.get_or_create(
+                username=username,
+                defaults={'rol': rol, 'ciudadano': ciudadano, 'funcionario': funcionario}
+            )
+            # Siempre resetear la contraseña para asegurar que funcione
+            user.set_password(password)
+            user.save()
 
-        u_carlos, _ = Usuario.objects.get_or_create(
-            username='carlos.perez', defaults={
-                'rol': 'ciudadano', 'ciudadano': c2,
-            }
-        )
-        if not u_carlos.has_usable_password():
-            u_carlos.set_password('Carlos1234!')
-            u_carlos.save()
-
-        u_juan, _ = Usuario.objects.get_or_create(
-            username='juan.lopez', defaults={
-                'rol': 'funcionario', 'funcionario': f1,
-            }
-        )
-        if not u_juan.has_usable_password():
-            u_juan.set_password('Juan1234!')
-            u_juan.save()
-
-        u_ana, _ = Usuario.objects.get_or_create(
-            username='ana.martinez', defaults={
-                'rol': 'funcionario', 'funcionario': f2,
-            }
-        )
-        if not u_ana.has_usable_password():
-            u_ana.set_password('Ana1234!')
-            u_ana.save()
-
-        self.stdout.write('  Usuarios creados (contraseña: Nombre1234!)')
+        self.stdout.write('  Usuarios creados con contraseñas hasheadas')
 
         # ─── Trámites de ejemplo ─────────────────────────────────────
         hoy = timezone.now().date()
