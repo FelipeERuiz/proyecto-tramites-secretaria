@@ -220,14 +220,12 @@ const abrirAsignar = (tramite) => {
 
 const cargarFuncionarios = async () => {
   try {
-    const { data } = await api.get('/tramites/', { params: { asignados: '1' } })
-    // Usar el funcionario del auth como opción por defecto
-    const yo = auth.user?.funcionario
-    if (yo) {
-      funcionarios.value = [{ id: yo.id, label: `${yo.nombre} ${yo.apellido} (yo)` }]
-    }
+    const { data } = await api.get('/usuarios/funcionarios/')
+    funcionarios.value = data.map(f => ({
+      id: f.id,
+      label: `${f.nombre} ${f.apellido} (${f.area || 'Sin área'})`
+    }))
   } catch {
-    // Si falla, al menos ofrecernos a nosotros mismos
     const yo = auth.user?.funcionario
     if (yo) {
       funcionarios.value = [{ id: yo.id, label: `${yo.nombre} ${yo.apellido}` }]

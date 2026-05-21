@@ -77,3 +77,18 @@ class PerfilUsuarioView(APIView):
     def get(self, request):
         serializer = UsuarioDetalleSerializer(request.user)
         return Response(serializer.data)
+
+
+class ListaFuncionariosView(APIView):
+    """
+    GET /api/usuarios/funcionarios/
+    Lista todos los funcionarios activos. Usado para asignar trámites.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import Funcionario
+        from .serializers import FuncionarioSerializer
+        funcionarios = Funcionario.objects.filter(activo=True)
+        serializer = FuncionarioSerializer(funcionarios, many=True)
+        return Response(serializer.data)
