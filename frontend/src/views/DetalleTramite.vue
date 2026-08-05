@@ -23,6 +23,20 @@
 
         <v-divider class="my-4" />
 
+        <!-- CU04 — Botón de reclamo (solo si está vencido y el usuario es ciudadano) -->
+          <v-alert
+            v-if="puedeReclamar"
+            type="warning"
+            variant="tonal"
+            class="mb-3"
+          >
+            <div class="d-flex align-center justify-space-between">
+              <span>Este trámite se encuentra vencido.</span>
+              <v-btn color="warning" size="small" @click="dialogReclamo = true">
+                Presentar reclamo
+              </v-btn>
+            </div>
+          </v-alert>
         <v-row dense>
           <v-col cols="12" sm="4">
             <p class="text-caption text-grey">Ciudadano</p>
@@ -151,15 +165,40 @@
         </div>
       </v-card>
     </template>
+  <!-- Diálogo de reclamo -->
+    <v-dialog v-model="dialogReclamo" max-width="450">
+      <v-card class="pa-4">
+        <v-card-title>Presentar reclamo</v-card-title>
+        <v-card-text>
+          <v-alert type="warning" variant="tonal" density="compact" class="mb-4">
+            Presentás un reclamo por trámite vencido sin resolución.
+          </v-alert>
+          <v-textarea
+            v-model="motivoReclamo"
+            label="Motivo del reclamo (mínimo 10 caracteres)"
+            rows="3"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="dialogReclamo = false">Cancelar</v-btn>
+          <v-btn color="warning" :loading="enviandoReclamo" @click="presentarReclamo">
+            Enviar reclamo
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, inject } from 'vue'
+import { ref, onMounted, inject, computed } from 'vue'
+import { useAuthStore } from '../stores/auth'
 import { useRoute } from 'vue-router'
 import api from '../services/api'
 
 const route  = useRoute()
+const auth = useAuthStore()
 const notify = inject('notify')
 
 const tramite            = ref(null)
@@ -210,6 +249,35 @@ const enviarComentario = async () => {
     notify('Error al enviar comentario', 'error')
   } finally {
     enviandoComentario.value = false
+  }
+}
+
+const puedeReclamar = computed(() => {
+  if (!tramite.value) return false
+  if (auth.user?.rol !== 'ciudadano') return false
+  if (tramite.value.estado_actual === 'finalizado') return false
+  if (!tramite.value.vencimiento) return false
+  return new Date(tramite.value.vencimiento) < new Date()
+})
+
+const dialogReclamo = ref(false)
+const motivoReclamo = ref('')
+const enviandoReclamo = ref(false)
+
+const presentarReclamo = async () => {
+  if (motivoReclamo.value.length < 10) return
+  enviandoReclamo.value = true
+  try {
+    await api.post(`/tramites/${route.params.id}/reclamo/`, {
+      motivo: motivoReclamo.value,
+    })
+    dialogReclamo.value = false
+    motivoReclamo.value = ''
+    await cargarTramite()
+  } catch (err) {
+    console.error('Error al presentar reclamo:', err)
+  } finally {
+    enviandoReclamo.value = false
   }
 }
 

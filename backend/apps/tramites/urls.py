@@ -8,6 +8,7 @@ from .views import (
     DevolucionView,
     ComentarioView,
     ResolucionView,
+    ReclamoView
 )
 
 urlpatterns = [
@@ -19,6 +20,7 @@ urlpatterns = [
     path('<int:pk>/devolver/',          DevolucionView.as_view(),         name='devolucion_tramite'),
     path('<int:pk>/comentarios/',       ComentarioView.as_view(),         name='comentarios_tramite'),
     path('<int:pk>/resoluciones/',      ResolucionView.as_view(),         name='resoluciones_tramite'),
+    path('<int:pk>/reclamo/', ReclamoView.as_view(), name='reclamo_tramite'),
 ]
 
 # Resumen completo de la API:

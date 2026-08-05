@@ -19,6 +19,7 @@ from .serializers import (
     ComentarioSerializer,
     ResolucionCrearSerializer,
     ResolucionSerializer,
+    ReclamoSerializer,
 )
 
 
@@ -42,7 +43,8 @@ class TramiteListCreateView(APIView):
         else:
             asignados_only = request.query_params.get('asignados', None)
             if asignados_only:
-                tramites = Tramite.objects.filter(funcionario_asignado=user.funcionario)
+                tramites = Tramite.objects.filter(
+                    funcionario_asignado=user.funcionario)
             else:
                 tramites = Tramite.objects.all()
 
@@ -108,6 +110,9 @@ class CambiarEstadoView(APIView):
 
         tramite = get_object_or_404(Tramite, pk=pk)
         serializer = CambiarEstadoSerializer(data=request.data)
+        motivo = motivo,
+            
+
 
         if serializer.is_valid():
             nuevo_estado = serializer.validated_data['tipo_estado']
@@ -279,6 +284,61 @@ class ResolucionView(APIView):
                 tramite.estado_actual = 'finalizado'
                 tramite.fecha_fin = timezone.now().date()
                 tramite.save()
+
+            return Response(
+                TramiteDetalleSerializer(tramite).data,
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReclamoView(APIView):
+    """
+    POST /api/tramites/<id>/reclamo/ → CU04
+    Solo ciudadanos, solo si el trámite está vencido.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.rol != 'ciudadano':
+            return Response(
+                {'error': 'Solo los ciudadanos pueden presentar reclamos.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        tramite = get_object_or_404(Tramite, pk=pk)
+
+        # El ciudadano solo puede reclamar sus propios trámites
+        if tramite.ciudadano != request.user.ciudadano:
+            return Response(
+                {'error': 'No podés reclamar sobre este trámite.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Verificar que esté vencido
+        hoy = timezone.now().date()
+        if not tramite.vencimiento or tramite.vencimiento >= hoy:
+            return Response(
+                {'error': 'El trámite aún no está vencido.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if tramite.estado_actual == 'finalizado':
+            return Response(
+                {'error': 'No se puede reclamar sobre un trámite finalizado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = ReclamoSerializer(data=request.data)
+        if serializer.is_valid():
+            motivo = serializer.validated_data['motivo']
+
+            Comentario.objects.create(
+                tramite   = tramite,
+                ciudadano = request.user.ciudadano,
+                texto     = f'[RECLAMO] {motivo}',
+            )
 
             return Response(
                 TramiteDetalleSerializer(tramite).data,

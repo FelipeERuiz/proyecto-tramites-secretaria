@@ -1,129 +1,109 @@
 <template>
   <div>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" :to="{ name: 'Dashboard' }" class="mb-4">
-      Volver a mis trámites
-    </v-btn>
+    <div class="d-flex align-center justify-space-between mb-6">
+      <div>
+        <h1 class="text-h5">Mis Trámites</h1>
+        <p class="text-body-2 text-grey">Bienvenido/a, {{ auth.nombreCompleto }}</p>
+      </div>
+      <v-btn color="primary" prepend-icon="mdi-plus" :to="{ name: 'NuevoTramite' }">
+        Nuevo trámite
+      </v-btn>
+    </div>
 
-    <v-card class="pa-6" max-width="600">
-      <v-card-title class="text-h6 pb-4">
-        <v-icon start icon="mdi-file-plus" />
-        Nuevo Trámite
-      </v-card-title>
-
-      <v-card-text>
-        <v-select
-          v-model="form.tipo_id"
-          :items="tipos"
-          item-title="nombre"
-          item-value="id"
-          label="Tipo de trámite"
-          prepend-inner-icon="mdi-folder-open"
-          :error-messages="errors.tipo_id"
-          :loading="loadingTipos"
-        />
-
-        <v-textarea
-          v-model="form.descripcion"
-          label="Descripción del trámite"
-          prepend-inner-icon="mdi-text"
-          :error-messages="errors.descripcion"
-          rows="4"
-          class="mt-2"
-          placeholder="Describí el motivo de tu solicitud..."
-        />
-
-        <v-text-field
-          v-model="form.vencimiento"
-          label="Fecha de vencimiento (opcional)"
-          type="date"
-          prepend-inner-icon="mdi-calendar"
-          class="mt-2"
-        />
-
-        <v-alert
-          v-if="errorGeneral"
-          type="error"
-          variant="tonal"
-          class="mt-4"
-          density="compact"
-        >
-          {{ errorGeneral }}
-        </v-alert>
-      </v-card-text>
-
-      <v-card-actions class="px-4 pb-4">
-        <v-spacer />
-        <v-btn variant="text" :to="{ name: 'Dashboard' }">Cancelar</v-btn>
-        <v-btn
-          color="primary"
-          :loading="loading"
-          @click="registrarTramite"
-          prepend-icon="mdi-send"
-        >
-          Registrar trámite
-        </v-btn>
-      </v-card-actions>
+    <v-card class="mb-4 pa-4">
+      <v-row dense>
+        <v-col cols="12" sm="4">
+          <v-select
+            v-model="filtroEstado"
+            :items="estados"
+            label="Estado"
+            clearable
+            density="compact"
+          />
+        </v-col>
+        <v-col cols="12" sm="4">
+          <v-text-field
+            v-model="fechaDesde"
+            label="Desde"
+            type="date"
+            density="compact"
+          />
+        </v-col>
+        <v-col cols="12" sm="4">
+          <v-text-field
+            v-model="fechaHasta"
+            label="Hasta"
+            type="date"
+            density="compact"
+          />
+        </v-col>
+      </v-row>
     </v-card>
+
+    <div v-if="loading" class="text-center py-8">
+      <v-progress-circular indeterminate color="primary" />
+    </div>
+
+    <v-alert v-else-if="tramites.length === 0" type="info" variant="tonal">
+      No tenés trámites registrados. ¡Creá uno nuevo!
+    </v-alert>
+
+    <div v-else>
+      <TramiteCard
+        v-for="tramite in tramites"
+        :key="tramite.id"
+        :tramite="tramite"
+        @click="verDetalle(tramite.id)"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 import api from '../../services/api'
+import TramiteCard from '../../components/TramiteCard.vue'
 
+const auth   = useAuthStore()
 const router = useRouter()
-const notify = inject('notify')
 
-const tipos        = ref([])
-const loadingTipos = ref(false)
-const loading      = ref(false)
-const errorGeneral = ref('')
-const errors       = reactive({ tipo_id: '', descripcion: '' })
+const tramites    = ref([])
+const loading     = ref(false)
+const filtroEstado = ref(null)
+const fechaDesde  = ref('')
+const fechaHasta  = ref('')
 
-const form = reactive({
-  tipo_id:     null,
-  descripcion: '',
-  vencimiento: '',
-})
+const estados = [
+  { title: 'Pendiente',  value: 'pendiente' },
+  { title: 'En proceso', value: 'en_proceso' },
+  { title: 'Devuelto',   value: 'devuelto' },
+  { title: 'Finalizado', value: 'finalizado' },
+  { title: 'Cancelado',  value: 'cancelado' },
+]
 
-const cargarTipos = async () => {
-  loadingTipos.value = true
-  try {
-    const { data } = await api.get('/tramites/tipos/')
-    tipos.value = data
-  } catch {
-    errorGeneral.value = 'No se pudieron cargar los tipos de trámite.'
-  } finally {
-    loadingTipos.value = false
-  }
-}
-
-const registrarTramite = async () => {
-  errors.tipo_id = ''
-  errors.descripcion = ''
-  errorGeneral.value = ''
-
-  if (!form.tipo_id)     { errors.tipo_id = 'Seleccioná un tipo de trámite'; return }
-  if (!form.descripcion) { errors.descripcion = 'La descripción es obligatoria'; return }
-
+const cargarTramites = async () => {
   loading.value = true
   try {
-    const payload = {
-      tipo_id:     form.tipo_id,
-      descripcion: form.descripcion,
-    }
-    if (form.vencimiento) payload.vencimiento = form.vencimiento
+    const params = {}
+    if (filtroEstado.value)  params.estado      = filtroEstado.value
+    if (fechaDesde.value)    params.fecha_desde  = fechaDesde.value
+    if (fechaHasta.value)    params.fecha_hasta  = fechaHasta.value
 
-    await api.post('/tramites/', payload)
-    notify('Trámite registrado exitosamente')
-    router.push({ name: 'Dashboard' })
+    const { data } = await api.get('/tramites/', { params })
+    tramites.value = data
   } catch (err) {
-    errorGeneral.value = err.response?.data?.error || 'Error al registrar el trámite.'
+    console.error('Error al cargar trámites:', err)
   } finally {
     loading.value = false
   }
 }
 
-onMounted(cargarTipos)
+const verDetalle = (id) => {
+  router.push({ name: 'DetalleTramite', params: { id } })
+}
+
+onMounted(cargarTramites)
+watch([filtroEstado, fechaDesde, fechaHasta], cargarTramites)
 </script>

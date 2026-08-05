@@ -120,3 +120,9 @@ class ResolucionCrearSerializer(serializers.Serializer):
     """
     descripcion = serializers.CharField(min_length=10)
     finalizar = serializers.BooleanField(default=False)
+
+class ReclamoSerializer(serializers.Serializer):
+    """
+    CU04 — Registrar reclamo por trámite vencido.
+    """
+    motivo = serializers.CharField(min_length=10)

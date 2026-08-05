@@ -41,7 +41,7 @@ const routes = [
   },
   // ─── Ruta compartida ──────────────────────────────────────────────
   {
-    path: "/tramites/:id",
+    path: "/tramite/:id",
     name: "DetalleTramite",
     component: () => import("../views/DetalleTramite.vue"),
     meta: { requiresAuth: true },
