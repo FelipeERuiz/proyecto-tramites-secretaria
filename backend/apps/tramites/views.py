@@ -20,6 +20,7 @@ from .serializers import (
     ResolucionCrearSerializer,
     ResolucionSerializer,
     ReclamoSerializer,
+    ReplicaSerializer,
 )
 
 
@@ -338,6 +339,52 @@ class ReclamoView(APIView):
                 tramite   = tramite,
                 ciudadano = request.user.ciudadano,
                 texto     = f'[RECLAMO] {motivo}',
+            )
+
+            return Response(
+                TramiteDetalleSerializer(tramite).data,
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReplicaView(APIView):
+    """
+    POST /api/tramites/<id>/replica/ → CU12
+    Solo ciudadanos, solo si el trámite está finalizado.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.rol != 'ciudadano':
+            return Response(
+                {'error': 'Solo los ciudadanos pueden presentar réplicas.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        tramite = get_object_or_404(Tramite, pk=pk)
+
+        if tramite.ciudadano != request.user.ciudadano:
+            return Response(
+                {'error': 'No podés replicar sobre este trámite.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if tramite.estado_actual != 'finalizado':
+            return Response(
+                {'error': 'Solo se pueden replicar trámites finalizados.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = ReplicaSerializer(data=request.data)
+        if serializer.is_valid():
+            motivo = serializer.validated_data['motivo']
+
+            Comentario.objects.create(
+                tramite   = tramite,
+                ciudadano = request.user.ciudadano,
+                texto     = f'[RÉPLICA] {motivo}',
             )
 
             return Response(

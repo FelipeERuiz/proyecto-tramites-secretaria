@@ -37,6 +37,20 @@
               </v-btn>
             </div>
           </v-alert>
+          <!-- CU12 — Botón de réplica (solo si está finalizado y es ciudadano) -->
+          <v-alert
+            v-if="puedeReplicar"
+            type="info"
+            variant="tonal"
+            class="mb-3"
+          >
+            <div class="d-flex align-center justify-space-between">
+              <span>Este trámite está finalizado. Podés presentar una réplica.</span>
+              <v-btn color="info" size="small" @click="dialogReplica = true">
+                Presentar réplica
+              </v-btn>
+            </div>
+          </v-alert>
         <v-row dense>
           <v-col cols="12" sm="4">
             <p class="text-caption text-grey">Ciudadano</p>
@@ -188,6 +202,29 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <!-- Diálogo de réplica -->
+    <v-dialog v-model="dialogReplica" max-width="450">
+      <v-card class="pa-4">
+        <v-card-title>Presentar réplica</v-card-title>
+        <v-card-text>
+          <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+            Presentás una réplica sobre la resolución del trámite finalizado.
+          </v-alert>
+          <v-textarea
+            v-model="motivoReplica"
+            label="Motivo de la réplica (mínimo 10 caracteres)"
+            rows="3"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="dialogReplica = false">Cancelar</v-btn>
+          <v-btn color="info" :loading="enviandoReplica" @click="presentarReplica">
+            Enviar réplica
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -278,6 +315,33 @@ const presentarReclamo = async () => {
     console.error('Error al presentar reclamo:', err)
   } finally {
     enviandoReclamo.value = false
+  }
+}
+
+const puedeReplicar = computed(() => {
+  if (!tramite.value) return false
+  if (auth.user?.rol !== 'ciudadano') return false
+  return tramite.value.estado_actual === 'finalizado'
+})
+
+const dialogReplica = ref(false)
+const motivoReplica = ref('')
+const enviandoReplica = ref(false)
+
+const presentarReplica = async () => {
+  if (motivoReplica.value.length < 10) return
+  enviandoReplica.value = true
+  try {
+    await api.post(`/tramites/${route.params.id}/replica/`, {
+      motivo: motivoReplica.value,
+    })
+    dialogReplica.value = false
+    motivoReplica.value = ''
+    await cargarTramite()
+  } catch (err) {
+    console.error('Error al presentar réplica:', err)
+  } finally {
+    enviandoReplica.value = false
   }
 }
 

@@ -126,3 +126,9 @@ class ReclamoSerializer(serializers.Serializer):
     CU04 — Registrar reclamo por trámite vencido.
     """
     motivo = serializers.CharField(min_length=10)
+
+class ReplicaSerializer(serializers.Serializer):
+    """
+    CU12 — Generar réplica sobre trámite finalizado.
+    """
+    motivo = serializers.CharField(min_length=10)
