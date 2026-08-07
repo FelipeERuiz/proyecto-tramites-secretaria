@@ -92,3 +92,21 @@ class ListaFuncionariosView(APIView):
         funcionarios = Funcionario.objects.filter(activo=True)
         serializer = FuncionarioSerializer(funcionarios, many=True)
         return Response(serializer.data)
+
+class RegistroCiudadanoView(APIView):
+    """
+    POST /api/usuarios/registro-ciudadano/
+    Registro público de ciudadanos.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from .serializers import RegistroCiudadanoSerializer
+        serializer = RegistroCiudadanoSerializer(data=request.data)
+        if serializer.is_valid():
+            usuario = serializer.save()
+            return Response(
+                {'mensaje': f'Ciudadano {usuario.username} registrado correctamente.'},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

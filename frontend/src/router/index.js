@@ -47,6 +47,12 @@ const routes = [
     meta: { requiresAuth: true },
     props: true,
   },
+  {
+    path: "/registro",
+    name: "Registro",
+    component: () => import("../views/RegistroView.vue"),
+    meta: { requiresAuth: false },
+  },
 ];
 
 const router = createRouter({

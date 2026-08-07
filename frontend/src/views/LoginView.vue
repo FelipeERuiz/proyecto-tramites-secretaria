@@ -70,6 +70,16 @@
               ¿Olvidaste tu contraseña?
             </v-btn>
           </v-card-actions>
+          <v-card-actions class="justify-center">
+            <v-btn
+              variant="tonal"
+              color="success"
+              size="small"
+              @click="$router.push({ name: 'Registro' })"
+            >
+              Crear nueva cuenta
+            </v-btn>
+          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
