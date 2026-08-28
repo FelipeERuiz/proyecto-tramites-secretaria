@@ -45,16 +45,21 @@
             density="compact"
           />
         </v-col>
-        <v-col cols="12" sm="3">
-          <v-checkbox
-            v-model="soloAsignados"
-            label="Solo mis asignados"
-            density="compact"
-            hide-details
-          />
-        </v-col>
       </v-row>
     </v-card>
+
+    <v-card class="mb-4">
+  <v-tabs v-model="tabActiva" color="primary" grow>
+    <v-tab value="todos">
+      <v-icon start icon="mdi-view-list" />
+      Todos los trámites
+    </v-tab>
+    <v-tab value="asignados">
+      <v-icon start icon="mdi-account-check" />
+      Mis asignados
+    </v-tab>
+  </v-tabs>
+</v-card>
 
     <!-- Loading -->
     <div v-if="loading" class="text-center py-8">
@@ -158,7 +163,7 @@ const loading        = ref(false)
 const filtroEstado   = ref(null)
 const fechaDesde     = ref('')
 const fechaHasta     = ref('')
-const soloAsignados  = ref(false)
+const tabActiva = ref('todos')
 
 const estados = [
   { title: 'Pendiente',  value: 'pendiente' },
@@ -190,7 +195,7 @@ const cargarTramites = async () => {
     if (filtroEstado.value)  params.estado      = filtroEstado.value
     if (fechaDesde.value)    params.fecha_desde  = fechaDesde.value
     if (fechaHasta.value)    params.fecha_hasta  = fechaHasta.value
-    if (soloAsignados.value) params.asignados    = '1'
+    if (tabActiva.value === 'asignados') params.asignados = '1'
 
     const { data } = await api.get('/tramites/', { params })
     tramites.value = data
@@ -250,7 +255,7 @@ const asignarTramite = async () => {
 }
 
 onMounted(cargarTramites)
-watch([filtroEstado, fechaDesde, fechaHasta, soloAsignados], cargarTramites)
+watch([filtroEstado, fechaDesde, fechaHasta, tabActiva], cargarTramites)
 </script>
 
 <style scoped>

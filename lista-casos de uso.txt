@@ -1,0 +1,36 @@
+CU01 - Registrar trámite.
+CU02 - Consultar estado de trámite.
+CU03 - Cambiar estado de trámite.
+CU04 - Registrar reclamo por trámite.
+CU05 - Registrar alta de funcionario.
+CU06 - Recuperar datos de sesión.
+CU07 - Registrar inicio de sesión.
+CU08 - Asignar trámite a funcionario.
+CU09 - Listar trámites por período.
+CU10 - Registrar devolución de trámite al ciudadano/Funcionario 
+CU11 - Generar respuesta/resolución a un trámite.
+CU12 - Generar réplica sobre trámite.
+CU13 - Generar comentario en trámite.
+ Agregados
+CU14 - Generar reporte estadístico de trámites - Pendiente
+CU15 - Auditar trazabilidad completa de un trámite - Pendiente
+CU16 - Gestionar tipos y categorías de trámite - Pendiente
+CU17 - Reasignar trámite a otro funcionario - Pendiente
+CU18 - Adjuntar documentación complementaria - Pendiente
+CU19 - Buscar trámites con filtros avanzados - Pendiente
+CU20 - Modificar datos personales del ciudadano - Pendiente
+CU21 - Registrar baja de funcionario - Pendiente
+CU22 - Registrar cierre de sesión - Implementado
+
+
+CU extra
+
+Usuario administrador para crear usuario - Cada funcionario resuelve un tipo de tramite especifico
+Generador de tramite 
+alta de tramite
+- documentacion 
+- fecha estimada de tramite 
+- cargar adjunto 
+- mostrar asignados en solapas
+- Estadisticas de promedios de resolucion 
+- 
