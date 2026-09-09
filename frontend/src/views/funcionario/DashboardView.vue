@@ -17,6 +17,55 @@
       </v-col>
     </v-row>
 
+    <!-- Panel de estadísticas de resolución -->
+<v-card v-if="estadisticasResolucion" class="mb-4 pa-4">
+  <h2 class="text-h6 mb-3">
+    <v-icon start icon="mdi-chart-timeline-variant" />
+    Estadísticas de resolución
+  </h2>
+
+  <v-row dense>
+    <v-col cols="12" sm="4">
+      <v-card variant="tonal" color="success" class="pa-3 text-center">
+        <div class="text-h5 font-weight-bold">{{ estadisticasResolucion.total_resueltos }}</div>
+        <div class="text-caption">Trámites resueltos</div>
+      </v-card>
+    </v-col>
+    <v-col cols="12" sm="4">
+      <v-card variant="tonal" color="info" class="pa-3 text-center">
+        <div class="text-h5 font-weight-bold">{{ estadisticasResolucion.promedio_dias_resolucion }} días</div>
+        <div class="text-caption">Promedio de resolución</div>
+      </v-card>
+    </v-col>
+    <v-col cols="12" sm="4">
+      <v-card variant="tonal" color="warning" class="pa-3 text-center">
+        <div class="text-h5 font-weight-bold">{{ estadisticasResolucion.tramites_activos }}</div>
+        <div class="text-caption">Trámites activos</div>
+      </v-card>
+    </v-col>
+  </v-row>
+
+  <div v-if="estadisticasResolucion.por_tipo?.length" class="mt-4">
+    <h3 class="text-subtitle-2 mb-2">Promedio por tipo de trámite</h3>
+    <v-table density="compact">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th class="text-right">Resueltos</th>
+          <th class="text-right">Promedio (días)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="item in estadisticasResolucion.por_tipo" :key="item.tipo">
+          <td>{{ item.tipo }}</td>
+          <td class="text-right">{{ item.cantidad }}</td>
+          <td class="text-right">{{ item.promedio_dias }}</td>
+        </tr>
+      </tbody>
+    </v-table>
+  </div>
+</v-card>
+
     <!-- Filtros -->
     <v-card class="mb-4 pa-4">
       <v-row dense>
@@ -47,6 +96,7 @@
         </v-col>
       </v-row>
     </v-card>
+  
 
     <v-card class="mb-4">
   <v-tabs v-model="tabActiva" color="primary" grow>
@@ -164,6 +214,16 @@ const filtroEstado   = ref(null)
 const fechaDesde     = ref('')
 const fechaHasta     = ref('')
 const tabActiva = ref('todos')
+const estadisticasResolucion = ref(null)
+
+const cargarEstadisticas = async () => {
+  try {
+    const { data } = await api.get('/tramites/estadisticas/')
+    estadisticasResolucion.value = data
+  } catch (err) {
+    console.error('Error al cargar estadísticas:', err)
+  }
+}
 
 const estados = [
   { title: 'Pendiente',  value: 'pendiente' },
@@ -187,6 +247,8 @@ const estadisticas = computed(() => [
   { label: 'Devueltos',   count: tramites.value.filter(t => t.estado_actual === 'devuelto').length,   color: 'error' },
   { label: 'Finalizados', count: tramites.value.filter(t => t.estado_actual === 'finalizado').length, color: 'success' },
 ])
+
+
 
 const cargarTramites = async () => {
   loading.value = true
@@ -254,7 +316,10 @@ const asignarTramite = async () => {
   }
 }
 
-onMounted(cargarTramites)
+onMounted(() => {
+  cargarTramites()
+  cargarEstadisticas()
+})
 watch([filtroEstado, fechaDesde, fechaHasta, tabActiva], cargarTramites)
 </script>
 

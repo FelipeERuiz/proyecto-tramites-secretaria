@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db.models import Avg, Count, F, ExpressionWrapper, DurationField
 
 from .models import Tramite, TipoTramite, Estado, Comentario, Resolucion
 from apps.usuarios.models import Funcionario
@@ -393,3 +394,63 @@ class ReplicaView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class EstadisticasView(APIView):
+    """
+    GET /api/tramites/estadisticas/
+    Devuelve métricas de tiempo de resolución para el panel del funcionario.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.rol != 'funcionario':
+            return Response(
+                {'error': 'Solo los funcionarios pueden ver estadísticas.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        finalizados = Tramite.objects.filter(
+            estado_actual='finalizado',
+            fecha_fin__isnull=False,
+        )
+
+        # Total resueltos
+        total_resueltos = finalizados.count()
+
+        # Promedio general de días de resolución
+        promedio_dias = 0
+        if total_resueltos > 0:
+            duraciones = [
+                (t.fecha_fin - t.fecha_inicio).days
+                for t in finalizados
+            ]
+            promedio_dias = round(sum(duraciones) / len(duraciones), 1)
+
+        # Promedio por tipo de trámite
+        por_tipo = []
+        tipos = TipoTramite.objects.filter(activo=True)
+        for tipo in tipos:
+            tramites_tipo = finalizados.filter(tipo=tipo)
+            cantidad = tramites_tipo.count()
+            if cantidad > 0:
+                dias = [
+                    (t.fecha_fin - t.fecha_inicio).days
+                    for t in tramites_tipo
+                ]
+                por_tipo.append({
+                    'tipo': tipo.nombre,
+                    'cantidad': cantidad,
+                    'promedio_dias': round(sum(dias) / len(dias), 1),
+                })
+
+        # Trámites activos (pendientes + en proceso)
+        activos = Tramite.objects.exclude(
+            estado_actual__in=['finalizado', 'cancelado']
+        ).count()
+
+        return Response({
+            'total_resueltos': total_resueltos,
+            'promedio_dias_resolucion': promedio_dias,
+            'tramites_activos': activos,
+            'por_tipo': por_tipo,
+        })
