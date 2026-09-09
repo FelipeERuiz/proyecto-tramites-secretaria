@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegistroFuncionarioView, RecuperarSesionView, PerfilUsuarioView, ListaFuncionariosView, RegistroCiudadanoView
+from .views import RegistroFuncionarioView, RecuperarSesionView, PerfilUsuarioView, ListaFuncionariosView, RegistroCiudadanoView, BajaFuncionarioView, ReactivarFuncionarioView, ListaCiudadanosView
 
 urlpatterns = [
     path('registro-funcionario/', RegistroFuncionarioView.as_view(),
@@ -11,4 +11,7 @@ urlpatterns = [
          name='lista_funcionarios'),
     path('registro-ciudadano/', RegistroCiudadanoView.as_view(),
          name='registro_ciudadano'),
+     path('funcionarios/<int:pk>/baja/',       BajaFuncionarioView.as_view(),      name='baja_funcionario'),
+     path('funcionarios/<int:pk>/reactivar/',  ReactivarFuncionarioView.as_view(), name='reactivar_funcionario'),
+     path('ciudadanos/', ListaCiudadanosView.as_view(), name='lista_ciudadanos'),
 ]

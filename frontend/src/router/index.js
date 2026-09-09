@@ -10,7 +10,13 @@ const routes = [
   },
   {
     path: "/",
-    redirect: "/dashboard",
+    redirect: () => {
+      const auth = useAuthStore();
+      if (auth.user?.rol === "administrador") return { name: "AdminDashboard" };
+      if (auth.user?.rol === "funcionario")
+        return { name: "FuncionarioDashboard" };
+      return { name: "Dashboard" };
+    },
   },
   // ─── Rutas de Ciudadano ───────────────────────────────────────────
   {
@@ -49,9 +55,15 @@ const routes = [
   },
   {
     path: "/registro",
-    name: "Registro",
-    component: () => import("../views/RegistroView.vue"),
-    meta: { requiresAuth: false },
+    redirect: "/login",
+  },
+
+  // ─── Rutas de Administrador ───────────────────────────────────────
+  {
+    path: "/administrador",
+    name: "AdminDashboard",
+    component: () => import("../views/administrador/DashboardView.vue"),
+    meta: { requiresAuth: true, rol: "administrador" },
   },
 ];
 
@@ -79,10 +91,14 @@ router.beforeEach(async (to, from, next) => {
     if (auth.user?.rol === "ciudadano") return next({ name: "Dashboard" });
     if (auth.user?.rol === "funcionario")
       return next({ name: "FuncionarioDashboard" });
+    if (auth.user?.rol === "administrador")
+      return next({ name: "AdminDashboard" });
   }
 
   // Si ya está logueado y va a /login → redirigir al dashboard
   if (to.name === "Login" && auth.isAuthenticated) {
+    if (auth.user?.rol === "administrador")
+      return next({ name: "AdminDashboard" });
     if (auth.user?.rol === "funcionario")
       return next({ name: "FuncionarioDashboard" });
     return next({ name: "Dashboard" });

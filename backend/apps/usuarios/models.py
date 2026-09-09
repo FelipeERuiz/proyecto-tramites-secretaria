@@ -63,6 +63,7 @@ class Usuario(AbstractBaseUser):
     ROL_CHOICES = [
         ('ciudadano',   'Ciudadano'),
         ('funcionario', 'Funcionario'),
+        ('administrador', 'Administrador'),
     ]
 
     username     = models.CharField(max_length=150, unique=True)

@@ -89,18 +89,28 @@ class ListaFuncionariosView(APIView):
     def get(self, request):
         from .models import Funcionario
         from .serializers import FuncionarioSerializer
-        funcionarios = Funcionario.objects.filter(activo=True)
+        # El administrador ve todos, los funcionarios solo los activos
+        if request.user.rol == 'administrador':
+            funcionarios = Funcionario.objects.all()
+        else:
+            funcionarios = Funcionario.objects.filter(activo=True)
         serializer = FuncionarioSerializer(funcionarios, many=True)
         return Response(serializer.data)
+
 
 class RegistroCiudadanoView(APIView):
     """
     POST /api/usuarios/registro-ciudadano/
-    Registro público de ciudadanos.
+    Solo el administrador puede registrar ciudadanos.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if request.user.rol != 'administrador':
+            return Response(
+                {'error': 'Solo el administrador puede registrar ciudadanos.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         from .serializers import RegistroCiudadanoSerializer
         serializer = RegistroCiudadanoSerializer(data=request.data)
         if serializer.is_valid():
@@ -110,3 +120,92 @@ class RegistroCiudadanoView(APIView):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BajaFuncionarioView(APIView):
+    """
+    POST /api/usuarios/funcionarios/<id>/baja/
+    Solo el administrador puede dar de baja funcionarios.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.rol != 'administrador':
+            return Response(
+                {'error': 'Solo el administrador puede dar de baja funcionarios.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        from .models import Funcionario
+        try:
+            funcionario = Funcionario.objects.get(pk=pk)
+        except Funcionario.DoesNotExist:
+            return Response(
+                {'error': 'Funcionario no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        funcionario.activo = False
+        funcionario.save()
+
+        # Desactivar también el usuario asociado
+        usuario = Usuario.objects.filter(funcionario=funcionario).first()
+        if usuario:
+            usuario.activo = False
+            usuario.save()
+
+        return Response({'mensaje': 'Funcionario dado de baja.'})
+
+
+class ReactivarFuncionarioView(APIView):
+    """
+    POST /api/usuarios/funcionarios/<id>/reactivar/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.rol != 'administrador':
+            return Response(
+                {'error': 'Solo el administrador puede reactivar funcionarios.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        from .models import Funcionario
+        try:
+            funcionario = Funcionario.objects.get(pk=pk)
+        except Funcionario.DoesNotExist:
+            return Response(
+                {'error': 'Funcionario no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        funcionario.activo = True
+        funcionario.save()
+
+        usuario = Usuario.objects.filter(funcionario=funcionario).first()
+        if usuario:
+            usuario.activo = True
+            usuario.save()
+
+        return Response({'mensaje': 'Funcionario reactivado.'})
+
+
+class ListaCiudadanosView(APIView):
+    """
+    GET /api/usuarios/ciudadanos/
+    Solo el administrador ve la lista completa de ciudadanos.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.rol != 'administrador':
+            return Response(
+                {'error': 'Solo el administrador puede ver esta información.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        from .models import Ciudadano
+        from .serializers import CiudadanoSerializer
+        ciudadanos = Ciudadano.objects.all()
+        serializer = CiudadanoSerializer(ciudadanos, many=True)
+        return Response(serializer.data)

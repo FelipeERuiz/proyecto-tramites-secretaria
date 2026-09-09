@@ -59,27 +59,6 @@
               Ingresar
             </v-btn>
           </v-card-text>
-
-          <v-card-actions class="justify-center">
-            <v-btn
-              variant="text"
-              size="small"
-              color="primary"
-              @click="dialogRecuperar = true"
-            >
-              ¿Olvidaste tu contraseña?
-            </v-btn>
-          </v-card-actions>
-          <v-card-actions class="justify-center">
-            <v-btn
-              variant="tonal"
-              color="success"
-              size="small"
-              @click="$router.push({ name: 'Registro' })"
-            >
-              Crear nueva cuenta
-            </v-btn>
-          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
@@ -161,11 +140,13 @@ const login = async () => {
     }
 
     // Redirigir según el rol
-    if (auth.esFuncionario) {
-      router.push({ name: 'FuncionarioDashboard' })
-    } else {
-      router.push({ name: 'Dashboard' })
-    }
+    if (auth.user?.rol === 'administrador') {
+    router.push({ name: 'AdminDashboard' })
+  } else if (auth.esFuncionario) {
+    router.push({ name: 'FuncionarioDashboard' })
+  } else {
+    router.push({ name: 'Dashboard' })
+  }
   } catch (err) {
     if (err.response?.status === 401) {
       errorGeneral.value = 'Usuario o contraseña incorrectos.'
