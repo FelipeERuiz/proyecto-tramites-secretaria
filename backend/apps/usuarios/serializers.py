@@ -5,14 +5,22 @@ from .models import Usuario, Ciudadano, Funcionario
 
 class CiudadanoSerializer(serializers.ModelSerializer):
     class Meta:
-        model  = Ciudadano
+        model = Ciudadano
         fields = ['id', 'nombre', 'apellido', 'dni', 'email', 'telefono']
 
 
 class FuncionarioSerializer(serializers.ModelSerializer):
+    tipos_tramite = serializers.SerializerMethodField()
     class Meta:
-        model  = Funcionario
-        fields = ['id', 'nombre', 'apellido', 'email', 'area', 'fecha_nacimiento']
+        model = Funcionario
+        fields = ['id', 'nombre', 'apellido',
+                  'email', 'area', 'fecha_nacimiento', "activo", "tipos_tramite"]
+
+    def get_tipos_tramite(self, obj):
+        return [
+            {'id': t.id, 'nombre': t.nombre}
+            for t in obj.tipos_tramite.all()
+        ]
 
 
 class RegistroFuncionarioSerializer(serializers.ModelSerializer):
@@ -20,16 +28,18 @@ class RegistroFuncionarioSerializer(serializers.ModelSerializer):
     CU05 — Registrar alta de funcionario.
     Crea el Funcionario y su Usuario en una sola operación.
     """
-    nombre           = serializers.CharField(write_only=True)
-    apellido         = serializers.CharField(write_only=True)
-    email            = serializers.EmailField(write_only=True)
-    area             = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    nombre = serializers.CharField(write_only=True)
+    apellido = serializers.CharField(write_only=True)
+    email = serializers.EmailField(write_only=True)
+    area = serializers.CharField(
+        write_only=True, required=False, allow_blank=True)
     fecha_nacimiento = serializers.DateField(write_only=True)
-    password         = serializers.CharField(write_only=True, validators=[validate_password])
-    password2        = serializers.CharField(write_only=True)
+    password = serializers.CharField(
+        write_only=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True)
 
     class Meta:
-        model  = Usuario
+        model = Usuario
         fields = [
             'username', 'password', 'password2',
             'nombre', 'apellido', 'email', 'area', 'fecha_nacimiento',
@@ -37,54 +47,59 @@ class RegistroFuncionarioSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({'password': 'Las contraseñas no coinciden.'})
+            raise serializers.ValidationError(
+                {'password': 'Las contraseñas no coinciden.'})
         if Usuario.objects.filter(username=attrs['username']).exists():
-            raise serializers.ValidationError({'username': 'El nombre de usuario ya está en uso.'})
+            raise serializers.ValidationError(
+                {'username': 'El nombre de usuario ya está en uso.'})
         return attrs
 
     def create(self, validated_data):
         # 1. Crear el Funcionario
         funcionario = Funcionario.objects.create(
-            nombre           = validated_data['nombre'],
-            apellido         = validated_data['apellido'],
-            email            = validated_data['email'],
-            area             = validated_data.get('area', ''),
-            fecha_nacimiento = validated_data['fecha_nacimiento'],
+            nombre=validated_data['nombre'],
+            apellido=validated_data['apellido'],
+            email=validated_data['email'],
+            area=validated_data.get('area', ''),
+            fecha_nacimiento=validated_data['fecha_nacimiento'],
         )
         # 2. Crear el Usuario vinculado
         usuario = Usuario.objects.create_user(
-            username    = validated_data['username'],
-            password    = validated_data['password'],
-            rol         = 'funcionario',
-            funcionario = funcionario,
+            username=validated_data['username'],
+            password=validated_data['password'],
+            rol='funcionario',
+            funcionario=funcionario,
         )
         return usuario
 
 
 class UsuarioDetalleSerializer(serializers.ModelSerializer):
     """Devuelve el perfil del usuario autenticado con sus datos según rol."""
-    ciudadano   = CiudadanoSerializer(read_only=True)
+    ciudadano = CiudadanoSerializer(read_only=True)
     funcionario = FuncionarioSerializer(read_only=True)
 
     class Meta:
-        model  = Usuario
+        model = Usuario
         fields = ['id', 'username', 'rol', 'ciudadano', 'funcionario']
+
 
 class RegistroCiudadanoSerializer(serializers.ModelSerializer):
     """
     Registro público de ciudadano.
     Crea el Ciudadano y su Usuario en una sola operación.
     """
-    nombre    = serializers.CharField(write_only=True)
-    apellido  = serializers.CharField(write_only=True)
-    dni       = serializers.IntegerField(write_only=True)
-    email     = serializers.EmailField(write_only=True)
-    telefono  = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    password  = serializers.CharField(write_only=True, validators=[validate_password])
+    nombre = serializers.CharField(write_only=True)
+    apellido = serializers.CharField(write_only=True)
+    dni = serializers.IntegerField(write_only=True)
+    email = serializers.EmailField(write_only=True)
+    telefono = serializers.CharField(
+        write_only=True, required=False, allow_blank=True)
+    password = serializers.CharField(
+        write_only=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True)
 
     class Meta:
-        model  = Usuario
+        model = Usuario
         fields = [
             'username', 'password', 'password2',
             'nombre', 'apellido', 'dni', 'email', 'telefono',
@@ -92,27 +107,31 @@ class RegistroCiudadanoSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({'password': 'Las contraseñas no coinciden.'})
+            raise serializers.ValidationError(
+                {'password': 'Las contraseñas no coinciden.'})
         if Ciudadano.objects.filter(dni=attrs['dni']).exists():
-            raise serializers.ValidationError({'dni': 'Ya existe un ciudadano con ese DNI.'})
+            raise serializers.ValidationError(
+                {'dni': 'Ya existe un ciudadano con ese DNI.'})
         if Ciudadano.objects.filter(email=attrs['email']).exists():
-            raise serializers.ValidationError({'email': 'Ya existe un ciudadano con ese email.'})
+            raise serializers.ValidationError(
+                {'email': 'Ya existe un ciudadano con ese email.'})
         if Usuario.objects.filter(username=attrs['username']).exists():
-            raise serializers.ValidationError({'username': 'El nombre de usuario ya está en uso.'})
+            raise serializers.ValidationError(
+                {'username': 'El nombre de usuario ya está en uso.'})
         return attrs
 
     def create(self, validated_data):
         ciudadano = Ciudadano.objects.create(
-            nombre   = validated_data['nombre'],
-            apellido = validated_data['apellido'],
-            dni      = validated_data['dni'],
-            email    = validated_data['email'],
-            telefono = validated_data.get('telefono', ''),
+            nombre=validated_data['nombre'],
+            apellido=validated_data['apellido'],
+            dni=validated_data['dni'],
+            email=validated_data['email'],
+            telefono=validated_data.get('telefono', ''),
         )
         usuario = Usuario.objects.create_user(
-            username  = validated_data['username'],
-            password  = validated_data['password'],
-            rol       = 'ciudadano',
-            ciudadano = ciudadano,
+            username=validated_data['username'],
+            password=validated_data['password'],
+            rol='ciudadano',
+            ciudadano=ciudadano,
         )
         return usuario

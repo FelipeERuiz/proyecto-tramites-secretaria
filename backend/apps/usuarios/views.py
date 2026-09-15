@@ -209,3 +209,35 @@ class ListaCiudadanosView(APIView):
         ciudadanos = Ciudadano.objects.all()
         serializer = CiudadanoSerializer(ciudadanos, many=True)
         return Response(serializer.data)
+
+
+class AsignarTiposFuncionarioView(APIView):
+    """
+    POST /api/usuarios/funcionarios/<id>/tipos/
+    Actualiza los tipos de trámite que resuelve un funcionario.
+    Body: { "tipos": [1, 3, 5] }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.rol != 'administrador':
+            return Response(
+                {'error': 'Solo el administrador puede asignar tipos.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        from .models import Funcionario
+        from apps.tramites.models import TipoTramite
+        try:
+            funcionario = Funcionario.objects.get(pk=pk)
+        except Funcionario.DoesNotExist:
+            return Response(
+                {'error': 'Funcionario no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        tipos_ids = request.data.get('tipos', [])
+        tipos = TipoTramite.objects.filter(pk__in=tipos_ids)
+        funcionario.tipos_tramite.set(tipos)
+
+        return Response({'mensaje': 'Tipos actualizados correctamente.'})

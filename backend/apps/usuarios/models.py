@@ -3,12 +3,12 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 
 class Ciudadano(models.Model):
-    nombre   = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
-    dni      = models.IntegerField(unique=True)
-    email    = models.EmailField(unique=True)
+    dni = models.IntegerField(unique=True)
+    email = models.EmailField(unique=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
-    activo   = models.BooleanField(default=True)
+    activo = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} (DNI: {self.dni})"
@@ -20,15 +20,22 @@ class Ciudadano(models.Model):
 
 
 class Funcionario(models.Model):
-    nombre          = models.CharField(max_length=100)
-    apellido        = models.CharField(max_length=100)
-    email           = models.EmailField(unique=True)
-    area            = models.CharField(max_length=100, blank=True, null=True)
+    nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    area = models.CharField(max_length=100, blank=True, null=True)
     fecha_nacimiento = models.DateField()
-    activo          = models.BooleanField(default=True)
+    activo = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} ({self.area})"
+
+    tipos_tramite = models.ManyToManyField(
+        'tramites.TipoTramite',
+        blank=True,
+        related_name='funcionarios',
+        verbose_name='Tipos de trámite que resuelve',
+    )
 
     class Meta:
         db_table = 'funcionario'
@@ -66,14 +73,14 @@ class Usuario(AbstractBaseUser):
         ('administrador', 'Administrador'),
     ]
 
-    username     = models.CharField(max_length=150, unique=True)
-    rol          = models.CharField(max_length=20, choices=ROL_CHOICES)
-    activo       = models.BooleanField(default=True)
-    is_staff     = models.BooleanField(default=False)      # acceso al admin
+    username = models.CharField(max_length=150, unique=True)
+    rol = models.CharField(max_length=20, choices=ROL_CHOICES)
+    activo = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)      # acceso al admin
     is_superuser = models.BooleanField(default=False)
 
     # FK opcionales — solo uno se usa según el rol
-    ciudadano   = models.OneToOneField(
+    ciudadano = models.OneToOneField(
         Ciudadano,   on_delete=models.CASCADE,
         null=True, blank=True, related_name='usuario'
     )
@@ -81,12 +88,13 @@ class Usuario(AbstractBaseUser):
         Funcionario, on_delete=models.CASCADE,
         null=True, blank=True, related_name='usuario'
     )
+
     @property
     def is_active(self):
         return self.activo
     objects = UsuarioManager()
 
-    USERNAME_FIELD  = 'username'
+    USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['rol']
 
     def __str__(self):

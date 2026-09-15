@@ -39,6 +39,7 @@
             <th>Nombre</th>
             <th>Email</th>
             <th>Área</th>
+            <th>Tipos</th>
             <th>Estado</th>
             <th>Acciones</th>
           </tr>
@@ -54,11 +55,25 @@
             <td>{{ f.email }}</td>
             <td>{{ f.area || '—' }}</td>
             <td>
+              <div class="d-flex flex-wrap gap-1">
+                <v-chip
+                  v-for="t in f.tipos_tramite"
+                  :key="t.id"
+                  size="x-small"
+                  color="info"
+                >
+                  {{ t.nombre }}
+                </v-chip>
+                <span v-if="!f.tipos_tramite?.length" class="text-caption text-grey">Sin tipos</span>
+              </div>
+            </td>
+            <td>
               <v-chip :color="f.activo ? 'success' : 'error'" size="small">
                 {{ f.activo ? 'Activo' : 'Inactivo' }}
               </v-chip>
             </td>
             <td>
+              <v-btn size="small" color="info" variant="text" icon="mdi-tag-multiple" @click="abrirTipos(f)" />
               <v-btn v-if="f.activo" size="small" color="error" variant="text" icon="mdi-account-off" @click="confirmarBaja(f, 'funcionario')" />
               <v-btn v-else size="small" color="success" variant="text" icon="mdi-account-check" @click="reactivar(f, 'funcionario')" />
             </td>
@@ -162,6 +177,32 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+        <!-- Diálogo Asignar tipos de trámite -->
+    <v-dialog v-model="dialogTipos" max-width="500">
+      <v-card class="pa-4">
+        <v-card-title>Tipos de trámite</v-card-title>
+        <v-card-text>
+          <p class="text-body-2 mb-3">
+            Seleccioná los tipos de trámite que puede resolver
+            <strong>{{ funcionarioTipos?.nombre }} {{ funcionarioTipos?.apellido }}</strong>:
+          </p>
+          <v-checkbox
+            v-for="tipo in tiposDisponibles"
+            :key="tipo.id"
+            v-model="tiposSeleccionados"
+            :label="tipo.nombre"
+            :value="tipo.id"
+            density="compact"
+            hide-details
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="dialogTipos = false">Cancelar</v-btn>
+          <v-btn color="primary" :loading="loadingTipos" @click="guardarTipos">Guardar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -182,6 +223,12 @@ const personaBaja = ref(null)
 const tipoBaja = ref('')
 const errorFunc = ref('')
 const errorCiu = ref('')
+
+const dialogTipos = ref(false)
+const funcionarioTipos = ref(null)
+const tiposDisponibles = ref([])
+const tiposSeleccionados = ref([])
+const loadingTipos = ref(false)
 
 const nuevoFunc = reactive({
   nombre: '', apellido: '', email: '', area: '',
@@ -269,6 +316,32 @@ const reactivar = async (persona, tipo) => {
     await api.post(`/usuarios/funcionarios/${persona.id}/reactivar/`)
     await cargarFuncionarios()
   } catch (err) { console.error(err) }
+}
+
+const abrirTipos = async (f) => {
+  funcionarioTipos.value = f
+  tiposSeleccionados.value = f.tipos_tramite?.map(t => t.id) || []
+
+  if (tiposDisponibles.value.length === 0) {
+    try {
+      const { data } = await api.get('/tramites/tipos/')
+      tiposDisponibles.value = data
+    } catch (err) { console.error(err) }
+  }
+
+  dialogTipos.value = true
+}
+
+const guardarTipos = async () => {
+  loadingTipos.value = true
+  try {
+    await api.post(`/usuarios/funcionarios/${funcionarioTipos.value.id}/tipos/`, {
+      tipos: tiposSeleccionados.value
+    })
+    dialogTipos.value = false
+    await cargarFuncionarios()
+  } catch (err) { console.error(err) }
+  finally { loadingTipos.value = false }
 }
 
 watch(tabActiva, (val) => {

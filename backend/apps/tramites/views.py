@@ -42,13 +42,20 @@ class TramiteListCreateView(APIView):
 
         if user.rol == 'ciudadano':
             tramites = Tramite.objects.filter(ciudadano=user.ciudadano)
-        else:
+        elif user.rol == 'funcionario':
+        # El funcionario solo ve trámites de sus tipos asignados
+            tipos_ids = user.funcionario.tipos_tramite.values_list('id', flat=True)
             asignados_only = request.query_params.get('asignados', None)
             if asignados_only:
                 tramites = Tramite.objects.filter(
-                    funcionario_asignado=user.funcionario)
+                funcionario_asignado=user.funcionario,
+                tipo_id__in=tipos_ids
+            )
             else:
-                tramites = Tramite.objects.all()
+                tramites = Tramite.objects.filter(tipo_id__in=tipos_ids)
+        else:
+            # Administrador ve todos
+            tramites = Tramite.objects.all()
 
         fecha_desde = request.query_params.get('fecha_desde', None)
         fecha_hasta = request.query_params.get('fecha_hasta', None)
