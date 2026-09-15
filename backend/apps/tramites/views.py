@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Avg, Count, F, ExpressionWrapper, DurationField
 
-from .models import Tramite, TipoTramite, Estado, Comentario, Resolucion
+from .models import Tramite, TipoTramite, Estado, Comentario, Resolucion, Adjunto
 from apps.usuarios.models import Funcionario
 from .serializers import (
     TramiteCrearSerializer,
@@ -22,6 +22,7 @@ from .serializers import (
     ResolucionSerializer,
     ReclamoSerializer,
     ReplicaSerializer,
+    AdjuntoSerializer,
 )
 
 
@@ -461,3 +462,53 @@ class EstadisticasView(APIView):
             'tramites_activos': activos,
             'por_tipo': por_tipo,
         })
+
+class AdjuntoView(APIView):
+        """
+        GET  /api/tramites/<id>/adjuntos/     → lista adjuntos del trámite
+        POST /api/tramites/<id>/adjuntos/     → subir nuevo adjunto (multipart/form-data)
+        """
+        permission_classes = [IsAuthenticated]
+
+        def get(self, request, pk):
+            tramite = get_object_or_404(Tramite, pk=pk)
+            adjuntos = tramite.adjuntos.all()
+            serializer = AdjuntoSerializer(adjuntos, many=True)
+            return Response(serializer.data)
+
+        def post(self, request, pk):
+            tramite = get_object_or_404(Tramite, pk=pk)
+
+            archivo = request.FILES.get('archivo')
+            if not archivo:
+                return Response(
+                    {'error': 'No se recibió ningún archivo.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Validar tipo de archivo
+            extensiones_validas = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx']
+            extension = archivo.name.split('.')[-1].lower()
+            if extension not in extensiones_validas:
+                return Response(
+                    {'error': f'Tipo de archivo no permitido. Se aceptan: {", ".join(extensiones_validas)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Validar tamaño (5MB)
+            if archivo.size > 5 * 1024 * 1024:
+                return Response(
+                    {'error': 'El archivo supera el tamaño máximo de 5MB.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            adjunto = Adjunto.objects.create(
+                tramite=tramite,
+                archivo=archivo,
+                nombre_archivo=archivo.name,
+            )
+
+            return Response(
+                AdjuntoSerializer(adjunto).data,
+                status=status.HTTP_201_CREATED
+            )

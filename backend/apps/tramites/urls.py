@@ -11,6 +11,7 @@ from .views import (
     ReclamoView,
     ReplicaView,
     EstadisticasView,
+    AdjuntoView,
 )
 
 urlpatterns = [
@@ -22,31 +23,8 @@ urlpatterns = [
     path('<int:pk>/devolver/',          DevolucionView.as_view(),         name='devolucion_tramite'),
     path('<int:pk>/comentarios/',       ComentarioView.as_view(),         name='comentarios_tramite'),
     path('<int:pk>/resoluciones/',      ResolucionView.as_view(),         name='resoluciones_tramite'),
-    path('<int:pk>/reclamo/', ReclamoView.as_view(), name='reclamo_tramite'),
-    path('<int:pk>/replica/', ReplicaView.as_view(), name='replica_tramite'),
-    path('estadisticas/', EstadisticasView.as_view(), name='estadisticas_tramites'),
+    path('<int:pk>/reclamo/',           ReclamoView.as_view(),            name='reclamo_tramite'),
+    path('<int:pk>/replica/',           ReplicaView.as_view(),            name='replica_tramite'),
+    path('estadisticas/',               EstadisticasView.as_view(),       name='estadisticas_tramites'),
+    path('<int:pk>/adjuntos/',          AdjuntoView.as_view(),            name='adjuntos_tramite'),
 ]
-
-# Resumen completo de la API:
-#
-# AUTH
-# POST /api/auth/login/                        → CU07 obtener tokens JWT
-# POST /api/auth/refresh/                       → renovar token
-#
-# USUARIOS
-# POST /api/usuarios/registro-funcionario/      → CU05 alta funcionario
-# POST /api/usuarios/recuperar-sesion/          → CU06 recuperar contraseña
-# GET  /api/usuarios/perfil/                    → datos del usuario logueado
-#
-# TRÁMITES
-# GET  /api/tramites/tipos/                     → tipos disponibles
-# GET  /api/tramites/                           → CU09 listar (filtros: fecha_desde, fecha_hasta, estado, asignados)
-# POST /api/tramites/                           → CU01 registrar trámite
-# GET  /api/tramites/<id>/                      → CU02 detalle con historial
-# POST /api/tramites/<id>/cambiar-estado/       → CU03 cambiar estado
-# POST /api/tramites/<id>/asignar/              → CU08 asignar a funcionario
-# POST /api/tramites/<id>/devolver/             → CU10 devolver al ciudadano
-# GET  /api/tramites/<id>/comentarios/          → listar comentarios
-# POST /api/tramites/<id>/comentarios/          → CU13 crear comentario
-# GET  /api/tramites/<id>/resoluciones/         → listar resoluciones
-# POST /api/tramites/<id>/resoluciones/         → CU11 emitir resolución

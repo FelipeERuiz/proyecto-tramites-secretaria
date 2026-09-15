@@ -60,7 +60,9 @@ class TramiteDetalleSerializer(serializers.ModelSerializer):
             'id', 'tipo', 'ciudadano', 'funcionario_asignado',
             'estado_actual', 'descripcion',
             'fecha_inicio', 'fecha_fin', 'vencimiento',
+            'fecha_estimada_resolucion'
             'historial_estados', 'comentarios', 'resoluciones',
+            'adjuntos'
         ]
 
 
@@ -72,7 +74,7 @@ class TramiteCrearSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tramite
-        fields = ['tipo_id', 'descripcion', 'vencimiento']
+        fields = ['tipo_id', 'descripcion', 'vencimiento', "fecha_estimada_resolucion"]
 
     def create(self, validated_data):
         ciudadano = self.context['request'].user.ciudadano
@@ -132,3 +134,8 @@ class ReplicaSerializer(serializers.Serializer):
     CU12 — Generar réplica sobre trámite finalizado.
     """
     motivo = serializers.CharField(min_length=10)
+
+class AdjuntoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Adjunto
+        fields = ['id', 'archivo', 'nombre_archivo', 'fecha_subida']

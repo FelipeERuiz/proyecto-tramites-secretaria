@@ -40,6 +40,29 @@
           class="mt-2"
         />
 
+        <v-text-field
+          v-model="form.fecha_estimada_resolucion"
+          label="Fecha estimada de resolución (opcional)"
+          type="date"
+          prepend-inner-icon="mdi-calendar-clock"
+          class="mt-2"
+          hint="Indicá cuándo esperás que se resuelva el trámite"
+          persistent-hint
+        />
+
+        <v-file-input
+          v-model="archivos"
+          label="Adjuntar documentación (opcional)"
+          prepend-inner-icon="mdi-paperclip"
+          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+          multiple
+          chips
+          show-size
+          class="mt-4"
+          hint="PDF, imágenes o Word. Máx 5MB por archivo."
+          persistent-hint
+        />
+
         <v-alert
           v-if="exito"
           type="success"
@@ -96,8 +119,10 @@ const form = reactive({
   tipo_id:     null,
   descripcion: '',
   vencimiento: '',
+  fecha_estimada_resolucion: '',
 })
 
+const archivos = ref([])
 const volverDashboard = () => {
   window.location.href = '/dashboard'
 }

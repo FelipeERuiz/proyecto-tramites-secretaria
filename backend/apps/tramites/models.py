@@ -41,6 +41,10 @@ class Tramite(models.Model):
     fecha_inicio  = models.DateField(auto_now_add=True)
     fecha_fin     = models.DateField(null=True, blank=True)
     vencimiento   = models.DateField(null=True, blank=True)
+    fecha_estimada_resolucion = models.DateField(
+    null=True, blank=True,
+    help_text='Fecha estimada por el ciudadano para la resolución'
+)
     descripcion   = models.TextField(blank=True, null=True)
 
     def __str__(self):
