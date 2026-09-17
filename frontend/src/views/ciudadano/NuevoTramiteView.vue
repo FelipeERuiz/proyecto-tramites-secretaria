@@ -149,19 +149,36 @@ const registrarTramite = async () => {
 
   loading.value = true
   try {
+    // 1. Crear el trámite
     const payload = {
       tipo_id:     form.tipo_id,
       descripcion: form.descripcion,
     }
     if (form.vencimiento) payload.vencimiento = form.vencimiento
+    if (form.fecha_estimada_resolucion) {
+      payload.fecha_estimada_resolucion = form.fecha_estimada_resolucion
+    }
 
-    await api.post('/tramites/', payload)
+    const { data: tramite } = await api.post('/tramites/', payload)
 
-    // Mostrar mensaje de éxito y redirigir
-    exito.value = true
-    setTimeout(() => {
-      window.location.href = '/dashboard'
-    }, 1000)
+    // 2. Subir adjuntos si hay
+    if (archivos.value && archivos.value.length > 0) {
+      const archivosArr = Array.isArray(archivos.value) ? archivos.value : [archivos.value]
+      for (const archivo of archivosArr) {
+        const formData = new FormData()
+        formData.append('archivo', archivo)
+        try {
+          await api.post(`/tramites/${tramite.id}/adjuntos/`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+        } catch (e) {
+          console.error(`Error al subir ${archivo.name}:`, e)
+        }
+      }
+    }
+
+    notify('Trámite registrado exitosamente')
+    router.push({ name: 'Dashboard' })
   } catch (err) {
     errorGeneral.value = err.response?.data?.error || 'Error al registrar el trámite.'
   } finally {

@@ -59,6 +59,9 @@
           <v-col cols="12" sm="4">
             <p class="text-caption text-grey">Fecha de inicio</p>
             <p>{{ tramite.fecha_inicio }}</p>
+            <p v-if="tramite.fecha_estimada_resolucion" class="text-body-2">
+            <v-icon size="small" icon="mdi-calendar-clock" />
+            Fecha estimada de resolución: {{ tramite.fecha_estimada_resolucion }}</p>
           </v-col>
           <v-col cols="12" sm="4">
             <p class="text-caption text-grey">Vencimiento</p>
@@ -126,6 +129,71 @@
         </v-card>
       </v-card>
 
+              <!-- Adjuntos -->
+      <v-card class="pa-4 mb-4">
+        <div class="d-flex align-center justify-space-between mb-3">
+          <h3 class="text-subtitle-1">
+            <v-icon start icon="mdi-paperclip" />
+            Documentación adjunta
+          </h3>
+          <v-btn
+            size="small"
+            color="primary"
+            variant="tonal"
+            prepend-icon="mdi-plus"
+            @click="dialogAdjunto = true"
+          >
+            Adjuntar
+          </v-btn>
+        </div>
+
+        <div v-if="!tramite?.adjuntos?.length" class="text-caption text-grey">
+          No hay documentación adjunta.
+        </div>
+
+        <v-list v-else density="compact">
+          <v-list-item
+            v-for="adj in tramite.adjuntos"
+            :key="adj.id"
+             :href="urlAdjunto(adj.archivo)"
+            target="_blank"
+            prepend-icon="mdi-file-document"
+          >
+            <v-list-item-title>{{ adj.nombre_archivo }}</v-list-item-title>
+            <v-list-item-subtitle>
+              {{ new Date(adj.fecha_subida).toLocaleString('es-AR') }}
+            </v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
+      </v-card>
+
+      <!-- Diálogo Adjuntar archivo -->
+      <v-dialog v-model="dialogAdjunto" max-width="450">
+        <v-card class="pa-4">
+          <v-card-title>Adjuntar documentación</v-card-title>
+          <v-card-text>
+            <v-file-input
+              v-model="nuevoAdjunto"
+              label="Seleccionar archivo"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              prepend-inner-icon="mdi-paperclip"
+              show-size
+              hint="PDF, imágenes o Word. Máx 5MB."
+              persistent-hint
+            />
+            <v-alert v-if="errorAdjunto" type="error" variant="tonal" density="compact" class="mt-2">
+              {{ errorAdjunto }}
+            </v-alert>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn variant="text" @click="dialogAdjunto = false">Cancelar</v-btn>
+            <v-btn color="primary" :loading="subiendo" @click="subirAdjunto">Subir</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+
       <!-- Comentarios -->
       <v-card class="pa-4">
         <h2 class="text-h6 mb-3">
@@ -137,6 +205,7 @@
           Sin comentarios aún.
         </div>
 
+      
         <div
           v-for="com in tramite.comentarios"
           :key="com.id"
@@ -251,6 +320,8 @@ const coloresEstado = {
   cancelado:  'grey',
 }
 
+
+
 const formatFecha = (fecha) => {
   if (!fecha) return ''
   return new Date(fecha).toLocaleString('es-AR', {
@@ -275,7 +346,7 @@ const enviarComentario = async () => {
   if (!nuevoComentario.value.trim()) return
 
   enviandoComentario.value = true
-  try {
+  try {v-list
     await api.post(`/tramites/${route.params.id}/comentarios/`, {
       texto: nuevoComentario.value
     })
@@ -287,6 +358,41 @@ const enviarComentario = async () => {
   } finally {
     enviandoComentario.value = false
   }
+}
+
+const dialogAdjunto = ref(false)
+const nuevoAdjunto = ref(null)
+const subiendo = ref(false)
+const errorAdjunto = ref('')
+
+const subirAdjunto = async () => {
+  errorAdjunto.value = ''
+  const archivo = Array.isArray(nuevoAdjunto.value) ? nuevoAdjunto.value[0] : nuevoAdjunto.value
+  if (!archivo) {
+    errorAdjunto.value = 'Seleccioná un archivo.'
+    return
+  }
+  subiendo.value = true
+  try {
+    const formData = new FormData()
+    formData.append('archivo', archivo)
+    await api.post(`/tramites/${route.params.id}/adjuntos/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    dialogAdjunto.value = false
+    nuevoAdjunto.value = null
+    await cargarTramite()
+  } catch (err) {
+    errorAdjunto.value = err.response?.data?.error || 'Error al subir el archivo.'
+  } finally {
+    subiendo.value = false
+  }
+}
+
+const urlAdjunto = (ruta) => {
+  if (!ruta) return '#'
+  if (ruta.startsWith('http')) return ruta
+  return `http://localhost:8000${ruta}`
 }
 
 const puedeReclamar = computed(() => {
